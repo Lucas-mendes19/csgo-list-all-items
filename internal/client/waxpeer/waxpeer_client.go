@@ -11,6 +11,39 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func FetchItemsToSell(key string) error {
+	query := url.Values{}
+	query.Add("api", key)
+	query.Add("game", "csgo")
+
+	request := gorequest.New()
+	resp, body, errs := request.Get("https://api.waxpeer.com/v1/fetch-my-inventory"+"?"+query.Encode()).
+		Set("Accept", "application/json").
+		Set("X-Requested-With", "XMLHttpRequest").
+		Set("Authorization", "Bearer "+ key).
+		EndBytes()
+
+	if len(errs) > 0 {
+		return errs[0]
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("invalid status code " + strconv.Itoa(resp.StatusCode))
+	}
+
+	var responseDTO ResponseDTO
+		if err := json.Unmarshal(body, &responseDTO); err != nil {
+		return err
+	}
+
+	if responseDTO.Success == false {
+		return errors.New("failed to fetch items: " + responseDTO.Message)
+	}
+
+	return nil
+}
+
+
 func ListItemsToSell(key string) (*ItemsToSellPayload, error) {
 	query := url.Values{}
 	query.Add("api", key)
@@ -35,6 +68,10 @@ func ListItemsToSell(key string) (*ItemsToSellPayload, error) {
 	var responseDTO ItemsToSellPayload
 	if err := json.Unmarshal(body, &responseDTO); err != nil {
 		return nil, err
+	}
+
+	if responseDTO.Success == false {
+		return nil, errors.New("failed to fetch items")
 	}
 
 	return &responseDTO, nil
@@ -66,14 +103,21 @@ func SellItem(logger *logrus.Logger, key string, items ItemsToSellPayload) error
 		Send(payload).
 		EndBytes()
 
-	logger.Info("Waxpeer - response: ", string(body))
-
 	if len(errs) > 0 {
 		return errs[0]
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("invalid status code " + strconv.Itoa(resp.StatusCode))
+	}
+
+	var responseDTO ResponseDTO
+		if err := json.Unmarshal(body, &responseDTO); err != nil {
+		return err
+	}
+
+	if responseDTO.Success == false {
+		return errors.New("failed to sell items: " + responseDTO.Message)
 	}
 
 	return nil

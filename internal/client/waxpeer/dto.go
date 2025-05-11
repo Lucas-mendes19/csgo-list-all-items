@@ -1,6 +1,7 @@
 package waxpeer
 
 type ItemsToSellPayload struct {
+	Success bool `json:"success"`
 	Items []ItemToSell `json:"items"`
 }
 
@@ -22,4 +23,9 @@ type OfferRequest struct {
 type Offer struct {
 	ID       int  `json:"item_id"`
 	Price    int `json:"price"`
+}
+
+type ResponseDTO struct {
+	Success bool `json:"success"`
+	Message string `json:"msg"`
 }
